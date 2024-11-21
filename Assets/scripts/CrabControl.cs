@@ -9,12 +9,15 @@ public class CrabControl : MonoBehaviour
     [SerializeField] Vector3 endPosition;
     Vector3 startPosition;
     bool movingToEnd = true;
+    [SerializeField] SpriteRenderer sprite;
+    float prevXPos;
 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         startPosition = transform.position;
+        prevXPos = transform.position.x;
     }
 
     // Update is called once per frame
@@ -46,6 +49,21 @@ public class CrabControl : MonoBehaviour
 
             }
         }
+
+        if (prevXPos > transform.position.x){
+
+            //Izquierda
+
+            sprite.flipX = false;
+
+        } else if (prevXPos < transform.position.x){
+
+            sprite.flipX = true;
+
+        }
+
+        prevXPos = transform.position.x;
+
     }
 
     void OnTriggerEnter2D(Collider2D other){
