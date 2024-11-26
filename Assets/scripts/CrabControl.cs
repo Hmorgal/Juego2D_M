@@ -70,7 +70,13 @@ public class CrabControl : MonoBehaviour
 
         if (other.gameObject.tag == "Player"){
 
-            SceneManager.LoadScene("Level_1");
+            if (GameManager.invulnerable == false){
+
+                // other.gameObject.GetComponent<PlayerMove>().hurt();
+
+                other.gameObject.SendMessage("hurt");
+
+            }
 
         }
 
