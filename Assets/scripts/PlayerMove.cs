@@ -1,3 +1,5 @@
+using TMPro;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -21,12 +23,27 @@ public class PlayerMove : MonoBehaviour
     [SerializeField] SpriteRenderer sprite;
     [SerializeField] Animator anim;
 
+    [SerializeField] TMP_Text txtLives, txtItems, txtTimes;
+
+    [SerializeField] int startLives = 3;
+    [SerializeField] int startTime = 180;
+
+    float time;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
 
         rb = GetComponent<Rigidbody2D>();
         gema.SetActive(true);
+
+        time = startTime;
+
+        GameManager.lives = startLives;
+
+        txtLives.text = "Vidas: " + GameManager.lives;
+
+        txtTimes.text = time.ToString();
         
     }
 
@@ -45,6 +62,7 @@ public class PlayerMove : MonoBehaviour
         } else {
 
             anim.SetBool("IsRunning", true);
+            anim.SetBool("IsCrouching", false);
 
         }
 
@@ -86,6 +104,18 @@ public class PlayerMove : MonoBehaviour
 
         }
 
+        //Mira si el jugador se agacha
+
+        if (Input.GetKeyDown(KeyCode.S)){
+
+            anim.SetBool("IsCrouching", true);
+
+        } else if (Input.GetKeyUp(KeyCode.S)){
+
+            anim.SetBool("IsCrouching", false);
+
+        }
+
         //Animacion de salto
 
         if (NoJumping() == true){
@@ -102,10 +132,29 @@ public class PlayerMove : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0)){
 
+            anim.SetBool("IsShooting", true);
+
             Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 1.7f, 0), Quaternion.identity);
 
         }
 
+        time = time - Time.deltaTime;
+
+        if (time <= 0){
+
+            time = 0;
+
+            SceneManager.LoadScene("Level_1");
+
+        }
+
+        float minutes, seconds;
+
+        minutes = Mathf.Floor(time/60);
+
+        seconds = Mathf.Floor(time % 60);
+        
+        txtTimes.text = minutes.ToString("00") + ":" + seconds.ToString("00");
 
     }
 
@@ -165,11 +214,13 @@ public class PlayerMove : MonoBehaviour
 
     }
 
-    //
+    // Daño recibido
 
     public void hurt(){
 
         GameManager.lives --;
+
+        txtLives.text = "Vidas: " + GameManager.lives;
 
         print(GameManager.lives);
 
