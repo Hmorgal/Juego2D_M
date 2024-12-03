@@ -25,23 +25,41 @@ public class PlayerMove : MonoBehaviour
 
     [SerializeField] TMP_Text txtLives, txtItems, txtTimes;
 
+    [SerializeField] GameObject txtWin, txtLose;
+
     [SerializeField] int startLives = 3;
     [SerializeField] int startTime = 180;
 
+    bool win = false;
+    bool lose = false;
+
     float time;
+
+    [SerializeField] AudioClip sndJump, sndShot, sndItem, sndHurt;
+
+    AudioSource audioSrc;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
 
+        audioSrc = GetComponent<AudioSource>();
+
         rb = GetComponent<Rigidbody2D>();
         gema.SetActive(true);
 
+        txtLose.SetActive(false);
+        txtWin.SetActive(false);
+
         time = startTime;
+
+        GameManager.invulnerable = false;
 
         GameManager.lives = startLives;
 
         txtLives.text = "Vidas: " + GameManager.lives;
+
+        txtItems.text = "Items: " + contador;
 
         txtTimes.text = time.ToString();
         
@@ -50,111 +68,136 @@ public class PlayerMove : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
+        if (!win && !lose){
         
-        float inputX = Input.GetAxis("Horizontal");
+            float inputX = Input.GetAxis("Horizontal");
 
-        rb.linearVelocity = new Vector2(inputX * MoveSpeed, rb.linearVelocity.y);
+            rb.linearVelocity = new Vector2(inputX * MoveSpeed, rb.linearVelocity.y);
 
-        if (inputX == 0){
+            if (inputX == 0){
 
-            anim.SetBool("IsRunning", false);
+                anim.SetBool("IsRunning", false);
 
+            } else {
+
+                anim.SetBool("IsRunning", true);
+                anim.SetBool("IsCrouching", false);
+
+            }
+
+            //Controla el salto desde tierra
+
+            if (Input.GetKeyDown(KeyCode.Space) && TouchingGround() == true){
+
+                rb.AddForce(Vector2.up * Jump, ForceMode2D.Impulse);
+
+                audioSrc.PlayOneShot(sndJump);
+
+            }
+
+            //Controla el doble salto
+
+            if (Input.GetKeyDown(KeyCode.Space) && TouchingGround() == false && JumpCount > 0){
+
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, 8);
+
+                JumpCount--;
+
+                audioSrc.PlayOneShot(sndJump);
+
+            }
+
+            if (TouchingGround() == true){
+
+                JumpCount = JumpMaxCount;
+
+            }
+
+            //Mira si el jugador mira a la derecha o a la izquierda
+
+            if (inputX>0){
+
+                sprite.flipX = false;
+                left = false;
+
+            } else if (inputX<0){
+
+                sprite.flipX = true;
+                left = true; 
+
+            }
+
+            //Mira si el jugador se agacha
+
+            if (Input.GetKeyDown(KeyCode.S)){
+
+                anim.SetBool("IsCrouching", true);
+
+            } else if (Input.GetKeyUp(KeyCode.S)){
+
+                anim.SetBool("IsCrouching", false);
+
+            }
+
+            //Animacion de salto
+
+            if (NoJumping() == true){
+
+                anim.SetBool("IsJumping", false);
+
+            } else {
+
+                anim.SetBool("IsJumping", true);
+
+            }
+
+            //Disparo
+
+            if (Input.GetMouseButtonDown(0)){
+
+                anim.SetBool("IsShooting", true);
+
+                audioSrc.PlayOneShot(sndShot);
+
+                Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 1.7f, 0), Quaternion.identity);
+
+            }
+
+            //Temporizador
+
+            time = time - Time.deltaTime;
+
+            if (time <= 0){
+
+                time = 0;
+
+                lose = true;
+
+                txtLose.SetActive(true);
+
+                Invoke("GoToMenu", 3);
+
+            }
+
+            //Esto calcula los minutos y segundos
+
+            float minutes, seconds;
+
+            minutes = Mathf.Floor(time/60);
+
+            seconds = Mathf.Floor(time % 60);
+
+            //Esto muestra el contador de forma correcta
+            
+            txtTimes.text = minutes.ToString("00") + ":" + seconds.ToString("00");
+
+        
         } else {
 
-            anim.SetBool("IsRunning", true);
-            anim.SetBool("IsCrouching", false);
+            rb.linearVelocity = Vector2.zero;
 
         }
-
-        //Controla el salto desde tierra
-
-        if (Input.GetKeyDown(KeyCode.Space) && TouchingGround() == true){
-
-            rb.AddForce(Vector2.up * Jump, ForceMode2D.Impulse);
-
-        }
-
-        //Controla el doble salto
-
-        if (Input.GetKeyDown(KeyCode.Space) && TouchingGround() == false && JumpCount > 0){
-
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 8);
-
-            JumpCount--;
-
-        }
-
-        if (TouchingGround() == true){
-
-            JumpCount = JumpMaxCount;
-
-        }
-
-        //Mira si el jugador mira a la derecha o a la izquierda
-
-        if (inputX>0){
-
-            sprite.flipX = false;
-            left = false;
-
-        } else if (inputX<0){
-
-            sprite.flipX = true;
-            left = true; 
-
-        }
-
-        //Mira si el jugador se agacha
-
-        if (Input.GetKeyDown(KeyCode.S)){
-
-            anim.SetBool("IsCrouching", true);
-
-        } else if (Input.GetKeyUp(KeyCode.S)){
-
-            anim.SetBool("IsCrouching", false);
-
-        }
-
-        //Animacion de salto
-
-        if (NoJumping() == true){
-
-            anim.SetBool("IsJumping", false);
-
-        } else {
-
-            anim.SetBool("IsJumping", true);
-
-        }
-
-        //Disparo
-
-        if (Input.GetMouseButtonDown(0)){
-
-            anim.SetBool("IsShooting", true);
-
-            Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 1.7f, 0), Quaternion.identity);
-
-        }
-
-        time = time - Time.deltaTime;
-
-        if (time <= 0){
-
-            time = 0;
-
-            SceneManager.LoadScene("Level_1");
-
-        }
-
-        float minutes, seconds;
-
-        minutes = Mathf.Floor(time/60);
-
-        seconds = Mathf.Floor(time % 60);
-        
-        txtTimes.text = minutes.ToString("00") + ":" + seconds.ToString("00");
 
     }
 
@@ -162,19 +205,37 @@ public class PlayerMove : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other){
 
+        //Gema
+
         if (other.CompareTag("item")){
 
             Destroy(other.gameObject);
 
+            audioSrc.PlayOneShot(sndItem);
+
             contador++;
 
-            print(contador);
+            txtItems.text =  "Items: " + contador;
+
+            if (contador == 10){
+
+                txtWin.SetActive(true);
+
+                win = true;
+
+                Invoke("GoToCredits", 3);
+
+            }
 
         }
+
+        //Item de invencibilidad
 
         if (other.CompareTag("Invencible")){
 
             Destroy(other.gameObject);
+
+            audioSrc.PlayOneShot(sndItem);
 
             becomeInvincible();
 
@@ -220,9 +281,9 @@ public class PlayerMove : MonoBehaviour
 
         GameManager.lives --;
 
-        txtLives.text = "Vidas: " + GameManager.lives;
+        audioSrc.PlayOneShot(sndHurt);
 
-        print(GameManager.lives);
+        txtLives.text = "Vidas: " + GameManager.lives;
 
         sprite.color = Color.red;
 
@@ -230,15 +291,34 @@ public class PlayerMove : MonoBehaviour
 
         Invoke("becomeVulnerable", 2);
 
+        
         if (GameManager.lives == 0){
+
+            lose = true;
 
             GameManager.lives = 3;
 
             GameManager.invulnerable = false;
 
-            SceneManager.LoadScene("Level_1");
+            txtLose.SetActive(true);
+
+            Invoke("GoToMenu", 3);
 
         }
+
+    }
+
+    //Este metodo manda al menu principal
+
+    void GoToMenu(){
+
+        SceneManager.LoadScene("MainMenu");
+
+    }
+
+    void GoToCredits(){
+
+        SceneManager.LoadScene("Credits");
 
     }
 
@@ -283,4 +363,5 @@ public class PlayerMove : MonoBehaviour
         }
 
     }
+
 }

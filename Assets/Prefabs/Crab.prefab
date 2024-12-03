@@ -193,6 +193,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abcc3ae9e11c14ea78c9181f3832025f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 2
+  speed: 3
   endPosition: {x: -3, y: -3.978, z: 0}
   sprite: {fileID: 7996876334513521585}
