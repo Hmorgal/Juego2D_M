@@ -1,15 +1,13 @@
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-public class CrabControl : MonoBehaviour
+public class EnemyAdvControl : MonoBehaviour
 {
-
     [SerializeField] int speed = 3;
+    [SerializeField] Vector3 SecondPosition;
     [SerializeField] Vector3 endPosition;
 
     Vector3 startPosition;
-    bool movingToEnd = false;
+    [SerializeField] int movingTo = 0;
     [SerializeField] SpriteRenderer sprite;
     float prevXPos;
 
@@ -24,25 +22,37 @@ public class CrabControl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (movingToEnd==true){
+        
+        if (movingTo==0){
+
+            transform.position = Vector3.MoveTowards(transform.position, SecondPosition, speed * Time.deltaTime);
+
+            if (transform.position == SecondPosition){
+
+                movingTo = 1;
+
+            }
+
+        } else if (movingTo==1) {
 
             transform.position = Vector3.MoveTowards(transform.position, endPosition, speed * Time.deltaTime);
 
             if (transform.position == endPosition){
 
-                movingToEnd = false;
+                movingTo = 2;
 
             }
 
-        } else {
+        } else if (movingTo==2) {
 
             transform.position = Vector3.MoveTowards(transform.position, startPosition, speed * Time.deltaTime);
 
             if (transform.position == startPosition){
 
-                movingToEnd = true;
+                movingTo = 0;
 
             }
+            
         } 
 
         if (prevXPos > transform.position.x){

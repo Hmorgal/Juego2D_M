@@ -1,6 +1,7 @@
 using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 public class PlayerMove : MonoBehaviour
@@ -14,7 +15,7 @@ public class PlayerMove : MonoBehaviour
     public GameObject gema;
 
     public static bool left = false;
-
+    
     int contador = 0;
 
     Rigidbody2D rb;
@@ -25,13 +26,16 @@ public class PlayerMove : MonoBehaviour
 
     [SerializeField] TMP_Text txtLives, txtItems, txtTimes;
 
-    [SerializeField] GameObject txtWin, txtLose;
+    [SerializeField] GameObject txtWin, txtLose, txtDJump;
 
     [SerializeField] int startLives = 3;
     [SerializeField] int startTime = 180;
 
     bool win = false;
     bool lose = false;
+    public bool DJump = false;
+
+    bool ShotInCoolDown = false;
 
     float time;
 
@@ -50,6 +54,7 @@ public class PlayerMove : MonoBehaviour
 
         txtLose.SetActive(false);
         txtWin.SetActive(false);
+        txtDJump.SetActive(false);
 
         time = startTime;
 
@@ -70,19 +75,41 @@ public class PlayerMove : MonoBehaviour
     {
 
         if (!win && !lose){
-        
+
             float inputX = Input.GetAxis("Horizontal");
+            float inputY = Input.GetAxis("Vertical");
 
-            rb.linearVelocity = new Vector2(inputX * MoveSpeed, rb.linearVelocity.y);
+            if (inputY >= 0){
 
-            if (inputX == 0){
+                rb.linearVelocity = new Vector2(inputX * MoveSpeed, rb.linearVelocity.y);
 
-                anim.SetBool("IsRunning", false);
+                if (inputX == 0){
+
+                    anim.SetBool("IsRunning", false);
+
+                } else {
+
+                    anim.SetBool("IsRunning", true);
+                    anim.SetBool("IsCrouching", false);
+
+                }
 
             } else {
 
-                anim.SetBool("IsRunning", true);
-                anim.SetBool("IsCrouching", false);
+                inputX = 0;
+
+                rb.linearVelocity = new Vector2(inputX * MoveSpeed, rb.linearVelocity.y);
+
+                if (inputX == 0){
+
+                    anim.SetBool("IsRunning", false);
+
+                } else {
+
+                    anim.SetBool("IsRunning", true);
+                    anim.SetBool("IsCrouching", false);
+
+                }
 
             }
 
@@ -98,19 +125,23 @@ public class PlayerMove : MonoBehaviour
 
             //Controla el doble salto
 
-            if (Input.GetKeyDown(KeyCode.Space) && TouchingGround() == false && JumpCount > 0){
+            if (DJump == true){
 
-                rb.linearVelocity = new Vector2(rb.linearVelocity.x, 8);
+                if (Input.GetKeyDown(KeyCode.Space) && TouchingGround() == false && JumpCount > 0){
 
-                JumpCount--;
+                    rb.linearVelocity = new Vector2(rb.linearVelocity.x, 8);
 
-                audioSrc.PlayOneShot(sndJump);
+                    JumpCount--;
 
-            }
+                    audioSrc.PlayOneShot(sndJump);
 
-            if (TouchingGround() == true){
+                }
 
-                JumpCount = JumpMaxCount;
+                if (TouchingGround() == true){
+
+                    JumpCount = JumpMaxCount;
+
+                }
 
             }
 
@@ -130,11 +161,11 @@ public class PlayerMove : MonoBehaviour
 
             //Mira si el jugador se agacha
 
-            if (Input.GetKeyDown(KeyCode.S)){
+            if (inputY < 0){
 
                 anim.SetBool("IsCrouching", true);
 
-            } else if (Input.GetKeyUp(KeyCode.S)){
+            } else if (inputY >= 0){
 
                 anim.SetBool("IsCrouching", false);
 
@@ -154,13 +185,25 @@ public class PlayerMove : MonoBehaviour
 
             //Disparo
 
-            if (Input.GetMouseButtonDown(0)){
+            if (Input.GetMouseButtonDown(0) && ShotInCoolDown == false){
 
                 anim.SetBool("IsShooting", true);
 
                 audioSrc.PlayOneShot(sndShot);
 
-                Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 1.7f, 0), Quaternion.identity);
+                if (inputY < 0){
+
+                    Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 0.87f, 0), Quaternion.identity);
+
+                } else if (inputY >= 0){
+
+                    Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 1.7f, 0), Quaternion.identity);
+
+                }
+
+                ShotInCoolDown = true;
+
+                Invoke("ShotCollDownEnd",0.2f);
 
             }
 
@@ -229,6 +272,22 @@ public class PlayerMove : MonoBehaviour
 
         }
 
+        //Item de doble salto
+
+        if (other.CompareTag("DJump")){
+
+            Destroy(other.gameObject);
+
+            audioSrc.PlayOneShot(sndItem);
+
+            DJump = true;
+
+            txtDJump.SetActive(true);
+
+            Invoke("DJumpHide", 4);
+
+        }
+
         //Item de invencibilidad
 
         if (other.CompareTag("Invencible")){
@@ -250,6 +309,22 @@ public class PlayerMove : MonoBehaviour
         if (other.gameObject.tag == "Water"){
 
             JumpCount = 1;
+
+            Jump = 4;
+
+            MoveSpeed = 3;
+
+        }
+
+    }
+
+    void OnTriggerExit2D(Collider2D other){
+
+        if (other.gameObject.tag == "Water"){
+
+            Jump = 8;
+
+            MoveSpeed = 6;
 
         }
 
@@ -322,6 +397,14 @@ public class PlayerMove : MonoBehaviour
 
     }
 
+    //textos de habilidades
+
+    void DJumpHide(){
+
+        txtDJump.SetActive(false);
+
+    }
+
     //comprueba si el personaje esta en el aire
 
     bool NoJumping(){
@@ -340,6 +423,14 @@ public class PlayerMove : MonoBehaviour
             return true;
 
         }
+
+    }
+
+    //Enfriamiento del disparo
+
+    void ShotCollDownEnd(){
+
+        ShotInCoolDown = false;
 
     }
 

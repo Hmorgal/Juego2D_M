@@ -8,6 +8,7 @@ TagManager:
   - Water
   - Invencible
   - enemy
+  - DJump
   layers:
   - Default
   - TransparentFX
