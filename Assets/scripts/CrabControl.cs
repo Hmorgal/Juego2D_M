@@ -7,8 +7,9 @@ public class CrabControl : MonoBehaviour
 
     [SerializeField] int speed = 3;
     [SerializeField] Vector3 endPosition;
+
     Vector3 startPosition;
-    bool movingToEnd = true;
+    bool movingToEnd = false;
     [SerializeField] SpriteRenderer sprite;
     float prevXPos;
 
@@ -25,10 +26,7 @@ public class CrabControl : MonoBehaviour
     {
         if (movingToEnd==true){
 
-            transform.position = Vector3.MoveTowards(
-                                transform.position,
-                                endPosition,
-                                speed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, endPosition, speed * Time.deltaTime);
 
             if (transform.position == endPosition){
 
@@ -38,17 +36,14 @@ public class CrabControl : MonoBehaviour
 
         } else {
 
-            transform.position = Vector3.MoveTowards(
-                                transform.position,
-                                startPosition,
-                                speed * Time.deltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, startPosition, speed * Time.deltaTime);
 
             if (transform.position == startPosition){
 
                 movingToEnd = true;
 
             }
-        }
+        } 
 
         if (prevXPos > transform.position.x){
 

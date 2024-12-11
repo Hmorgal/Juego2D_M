@@ -5,10 +5,18 @@ public class ShotControl : MonoBehaviour
 
     Rigidbody2D rb;
     [SerializeField] int speed = 10;
+
+    [SerializeField] AudioClip sndDead;
+
+    AudioSource audioSrc;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+
+        audioSrc = GetComponent<AudioSource>();
+
 
         if (PlayerMove.left == false){
 
@@ -41,6 +49,7 @@ public class ShotControl : MonoBehaviour
 
             Destroy(other.gameObject);
             Destroy(gameObject);
+            audioSrc.PlayOneShot(sndDead);
 
         }
         
