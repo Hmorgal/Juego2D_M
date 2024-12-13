@@ -1,6 +1,8 @@
 using TMPro;
 using Unity.Mathematics;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 public class PlayerMove : MonoBehaviour
@@ -11,27 +13,46 @@ public class PlayerMove : MonoBehaviour
     public int Jump = 5;
     public int JumpCount = 1;
     public int JumpMaxCount = 1;
+    public int AirAmount = 8;
     public GameObject gema;
 
     public static bool left = false;
-
+    
     int contador = 0;
 
+    [SerializeField] int NeededGems = 10;
+
     Rigidbody2D rb;
+    CapsuleCollider2D PlayerCollider;
+
+    Vector2 ColliderPSize;
+    Vector2 ColliderPOffset;
+
+    Vector2 ColliderPSizeCrouch;
+    Vector2 ColliderPOffsetCrouch;
 
     [SerializeField] GameObject shot;
+    [SerializeField] GameObject AirMeter;
+
     [SerializeField] SpriteRenderer sprite;
+    
     [SerializeField] Animator anim;
+    [SerializeField] Animator AirMeterAnim;
 
     [SerializeField] TMP_Text txtLives, txtItems, txtTimes;
 
-    [SerializeField] GameObject txtWin, txtLose;
+    [SerializeField] GameObject txtWin, txtLose, txtDJump;
 
     [SerializeField] int startLives = 3;
     [SerializeField] int startTime = 180;
 
     bool win = false;
     bool lose = false;
+    public bool level1F = false;
+    public bool DJump = false;
+
+    bool ShotInCoolDown = false;
+    bool AirInCoolDown = false;
 
     float time;
 
@@ -46,10 +67,21 @@ public class PlayerMove : MonoBehaviour
         audioSrc = GetComponent<AudioSource>();
 
         rb = GetComponent<Rigidbody2D>();
+
+        PlayerCollider = GetComponent<CapsuleCollider2D>();
+
+        ColliderPSize = new Vector2(PlayerCollider.size.x, PlayerCollider.size.y);
+        ColliderPOffset = new Vector2(PlayerCollider.offset.x, PlayerCollider.offset.y);
+
+        ColliderPSizeCrouch = new Vector2(PlayerCollider.size.x, 1.44663f);
+        ColliderPOffsetCrouch = new Vector2(PlayerCollider.offset.x, 0.7278455f);
+
         gema.SetActive(true);
+        AirMeter.SetActive(false);
 
         txtLose.SetActive(false);
         txtWin.SetActive(false);
+        txtDJump.SetActive(false);
 
         time = startTime;
 
@@ -70,19 +102,58 @@ public class PlayerMove : MonoBehaviour
     {
 
         if (!win && !lose){
-        
+
             float inputX = Input.GetAxis("Horizontal");
+            float inputY = Input.GetAxis("Vertical");
 
-            rb.linearVelocity = new Vector2(inputX * MoveSpeed, rb.linearVelocity.y);
+            if (inputY >= 0){
 
-            if (inputX == 0){
+                rb.linearVelocity = new Vector2(inputX * MoveSpeed, rb.linearVelocity.y);
 
-                anim.SetBool("IsRunning", false);
+                if (inputX == 0){
+
+                    anim.SetBool("IsRunning", false);
+
+                } else {
+
+                    anim.SetBool("IsRunning", true);
+                    anim.SetBool("IsCrouching", false);
+
+                }
 
             } else {
 
-                anim.SetBool("IsRunning", true);
-                anim.SetBool("IsCrouching", false);
+                inputX = 0;
+
+                rb.linearVelocity = new Vector2(inputX * MoveSpeed, rb.linearVelocity.y);
+
+                if (inputX == 0){
+
+                    anim.SetBool("IsRunning", false);
+
+                } else {
+
+                    anim.SetBool("IsRunning", true);
+                    anim.SetBool("IsCrouching", false);
+
+                }
+
+            }
+
+            //control el movimiento en las escaleras
+
+            if (GameManager.onLader == true){
+
+                if (inputY > 0){
+
+                    rb.linearVelocity = new Vector2(rb.linearVelocityX, inputY * MoveSpeed);
+
+                } else if (inputY < 0){
+
+                    rb.linearVelocity = new Vector2(rb.linearVelocityX, inputY * MoveSpeed);
+
+                }
+
 
             }
 
@@ -98,19 +169,23 @@ public class PlayerMove : MonoBehaviour
 
             //Controla el doble salto
 
-            if (Input.GetKeyDown(KeyCode.Space) && TouchingGround() == false && JumpCount > 0){
+            if (DJump == true){
 
-                rb.linearVelocity = new Vector2(rb.linearVelocity.x, 8);
+                if (Input.GetKeyDown(KeyCode.Space) && TouchingGround() == false && JumpCount > 0){
 
-                JumpCount--;
+                    rb.linearVelocity = new Vector2(rb.linearVelocity.x, 8);
 
-                audioSrc.PlayOneShot(sndJump);
+                    JumpCount--;
 
-            }
+                    audioSrc.PlayOneShot(sndJump);
 
-            if (TouchingGround() == true){
+                }
 
-                JumpCount = JumpMaxCount;
+                if (TouchingGround() == true){
+
+                    JumpCount = JumpMaxCount;
+
+                }
 
             }
 
@@ -130,13 +205,19 @@ public class PlayerMove : MonoBehaviour
 
             //Mira si el jugador se agacha
 
-            if (Input.GetKeyDown(KeyCode.S)){
+            if (inputY < 0){
 
                 anim.SetBool("IsCrouching", true);
 
-            } else if (Input.GetKeyUp(KeyCode.S)){
+                PlayerCollider.size = ColliderPSizeCrouch;
+                PlayerCollider.offset = ColliderPOffsetCrouch;
+
+            } else if (inputY >= 0){
 
                 anim.SetBool("IsCrouching", false);
+
+                PlayerCollider.size = ColliderPSize;
+                PlayerCollider.offset = ColliderPOffset;    
 
             }
 
@@ -154,13 +235,25 @@ public class PlayerMove : MonoBehaviour
 
             //Disparo
 
-            if (Input.GetMouseButtonDown(0)){
+            if (Input.GetMouseButtonDown(0) && ShotInCoolDown == false){
 
                 anim.SetBool("IsShooting", true);
 
                 audioSrc.PlayOneShot(sndShot);
 
-                Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 1.7f, 0), Quaternion.identity);
+                if (inputY < 0){
+
+                    Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 0.87f, 0), Quaternion.identity);
+
+                } else if (inputY >= 0){
+
+                    Instantiate(shot, new Vector3(transform.position.x, transform.position.y + 1.7f, 0), Quaternion.identity);
+
+                }
+
+                ShotInCoolDown = true;
+
+                Invoke("ShotCollDownEnd",0.2f);
 
             }
 
@@ -217,7 +310,7 @@ public class PlayerMove : MonoBehaviour
 
             txtItems.text =  "Items: " + contador;
 
-            if (contador == 10){
+            if (contador == NeededGems){
 
                 txtWin.SetActive(true);
 
@@ -226,6 +319,22 @@ public class PlayerMove : MonoBehaviour
                 Invoke("GoToCredits", 3);
 
             }
+
+        }
+
+        //Item de doble salto
+
+        if (other.CompareTag("DJump")){
+
+            Destroy(other.gameObject);
+
+            audioSrc.PlayOneShot(sndItem);
+
+            DJump = true;
+
+            txtDJump.SetActive(true);
+
+            Invoke("DJumpHide", 4);
 
         }
 
@@ -241,6 +350,28 @@ public class PlayerMove : MonoBehaviour
 
         }
 
+        //Entra en el agua
+
+        if (other.CompareTag("Water")){
+
+            AirMeter.SetActive(true);
+
+            AirMeterAnim.SetBool("PlayerInWater", true);
+
+            AirAmount = 8;
+
+        }
+
+        //Escaleras
+
+        if (other.CompareTag("Lader")){
+
+            GameManager.onLader = true;
+            rb.gravityScale = 0;
+            rb.linearDamping = 20;
+
+        }
+
     }
 
     //Agua
@@ -251,9 +382,51 @@ public class PlayerMove : MonoBehaviour
 
             JumpCount = 1;
 
+            Jump = 4;
+
+            MoveSpeed = 3;
+
+            if (AirInCoolDown == false){
+
+                Invoke("AirTimer", 1);
+
+                AirInCoolDown = true;
+
+            }
+
         }
 
     }
+
+    void OnTriggerExit2D(Collider2D other){
+
+        //Agua
+
+        if (other.gameObject.tag == "Water"){
+
+            AirMeter.SetActive(false);
+
+            AirMeterAnim.SetBool("PlayerInWater", false);
+
+            Jump = 8;
+
+            MoveSpeed = 6;
+
+        }
+
+        //Escaleras
+
+        if (other.CompareTag("Lader")){
+
+            GameManager.onLader = false;
+            rb.gravityScale = 1;
+            rb.linearDamping = 0;
+
+        }
+
+    }
+
+    //Se ejecuta cuando el medidior de aire se vacia y el jugador sigue en el agua
 
     //Item de invencibilidad
 
@@ -318,7 +491,25 @@ public class PlayerMove : MonoBehaviour
 
     void GoToCredits(){
 
-        SceneManager.LoadScene("Credits");
+        if (level1F == false){
+
+            SceneManager.LoadScene("Level_2");
+
+            level1F = true;
+
+        } else if (level1F == true) {
+
+            SceneManager.LoadScene("Credits");
+
+        }
+
+    }
+
+    //textos de habilidades
+
+    void DJumpHide(){
+
+        txtDJump.SetActive(false);
 
     }
 
@@ -338,6 +529,36 @@ public class PlayerMove : MonoBehaviour
         }else{
 
             return true;
+
+        }
+
+    }
+
+    //Enfriamiento del disparo
+
+    void ShotCollDownEnd(){
+
+        ShotInCoolDown = false;
+
+    }
+
+    //Controla el tiempo en el agua
+
+    void AirTimer(){
+
+        if (AirAmount == 0){
+
+            hurt();
+
+            AirAmount = 8;
+
+            AirInCoolDown = false;
+
+        } else {
+
+            AirAmount --;
+
+            AirInCoolDown = false;
 
         }
 

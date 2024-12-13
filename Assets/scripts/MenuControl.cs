@@ -16,4 +16,10 @@ public class MenuControl : MonoBehaviour
 
     }
 
+    public void StatrLevel2(){
+
+        SceneManager.LoadScene("Level_2");
+
+    }
+
 }

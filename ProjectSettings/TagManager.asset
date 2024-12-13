@@ -8,6 +8,9 @@ TagManager:
   - Water
   - Invencible
   - enemy
+  - DJump
+  - JumperDetector
+  - Lader
   layers:
   - Default
   - TransparentFX
